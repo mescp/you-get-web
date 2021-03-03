@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, user-scalable=no"
+    />
+    <link rel="stylesheet" href="/content/bootstrap.min.css" />
+  </head>
+
+  <body>
+    <div class="container center-block">
+ 
+      <h1><%= title %> <small>转发</small></h1>
+      <ul class="list-group"></ul>
+        <div class="input-group">
+          <span class="input-group-addon" id="basic-addon1">URL</span>
+          <input
+            type="text"
+            id="url"
+            class="form-control"
+            placeholder="输入多媒体地址"
+            aria-describedby="basic-addon1"
+          />
+          <span class="input-group-btn">
+            <button class="btn btn-default" type="button" id="getinfo">
+              Go!
+            </button>
+          </span>
+        </div>
+
+      <ul class="list-group"></ul>
+        <li id="infoview" class="list-group-item ">
+            通过<a href="https://you-get.org/" target="_blank">you-get</a> 解析视频地址,服务端中转下载视频.
+        </li>
+      </ul>
+    </div>
+
+    <!--公用提示框-->
+    <div
+      id="bs-message-modal-sm"
+      class="modal fade"
+      tabindex="-1"
+      role="dialog"
+      data-backdrop="false"
+    >
+      <div class="modal-dialog">
+        <div
+          id="bs-message-modal-alert"
+          class="alert alert-danger text-center"
+          role="alert"
+        >
+          <p id="bs-message-modal-text"></p>
+        </div>
+      </div>
+    </div>
+
+    <script src="/scripts/jquery-1.11.3.min.js"></script>
+    <script src="/scripts/bootstrap.min.js"></script>
+    <script src="/scripts/common.js"></script>
+    <script type="application/javascript">
+      $(document).ready(function () {
+        $("#getinfo").on("click", function () {
+            $(this).attr("disabled", "true"); //设置变灰按钮
+            if (!$("#url").val()) {
+              $("#infoview").html("先输入多媒体地址.");
+              $("#getinfo").removeAttr("disabled");
+              return;
+            }
+            $("#infoview").html("正在解析...");
+            const mediaurl = encodeURIComponent($("#url").val());
+            API.query("/media/info/" + mediaurl,  (err, data) => {
+            // API.query("/info.json", function (err, data) {
+              try {
+                if(typeof(data)=='string'){
+                  data = JSON.parse(data);
+                }
+                if (err || data.error) { throw new error(err || data.error) }
+
+                $("#infoview").html(data.title);
+                const trs = [];
+                Object.keys(data.streams).forEach((key) => {
+                  trs.push(
+                    `<tr><th scope="row">${key}</th> <td>${
+                      data.streams[key].quality || data.streams[key].video_profile || "NaN"
+                    }</td> <td>${data.streams[key].type || data.streams[key].format || data.streams[key].container}</td> 
+                    <td>${(data.streams[key].size/1024/1024).toFixed(2)}mb</td> 
+                    <td>
+                        <a href="/media/download/${encodeURIComponent(
+                          data.streams[key].url || data.streams[key].src[0]
+                        )}/${data.title}.${data.streams[key].container}" target="_blank" download="${data.title}.${data.streams[key].container}">链接</a>
+                    </td> 
+                    </tr>`
+                  );
+                });
+                const table = ` 
+                <table class="table">
+                <thead> <tr><th>#</th><th>质量</th><th>格式</th><th>大小</th><th>地址</th> </tr></thead>
+                <tbody> ${trs}</tbody></table>`;
+
+                $("#infoview").append(table);
+                $("#getinfo").removeAttr("disabled");
+              } catch (error) {
+                $("#infoview").html('地址解析异常,'+error);
+                $("#getinfo").removeAttr("disabled");
+              }
+            });
+        });
+      });
+    </script>
+  </body>
+</html>
